@@ -1,0 +1,120 @@
+---
+title: "IMDB Data analysis"
+author: "Donghao Xue"
+date: "12/09/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+pacman::p_load("rstanarm","VGAM","sp","tidyverse","tmap","riskyr", "curl", "chron", "ggplot2", "Matrix","lme4","arm")
+
+```
+
+# 1.Abstract
+
+Every time before I watch a movie, I will check the rating score on IMBD which is a popular website providing source for movies. In this project, I choose a dataset that contains information of about five thousand movies from IMDB. I will mainly focus on finding the effect of different factors on the rating score of the movie. I plan to use two models to estimate the effect, one is linear regression model and the other one is multilevel model. At the end I found that those factors in the dataset have very weak relationship with the rating score. Therefore if we want to know the rating score will be effected by what kind of factors, we need to collect more information of movies. 
+
+# 2.Introduction
+
+This dataset is downloaded from the Kaggle website and it has 28 variables such as the country that movies are made, the rating score of movies(from 1 to 10), the number of critics for reviews, the duration of the movie and so on. I will consider the country, the duration of the movie, the number of critics for reviews, the budget as predictors, so that I can see how the rating score is effected by these predictors.
+
+```{r, echo = FALSE}
+imdb = read.csv("C:/Users/Daniel Xue/Desktop/movie_metadata.csv")
+```
+
+# 3.Method
+
+```{r, echo = FALSE}
+#Data cleaning
+data = read.csv("C:/Users/Daniel Xue/Desktop/movie_metadata.csv")
+imdb = na.omit(data)
+imdb$budget = imdb$budget/100000000
+
+```
+
+## 3.1 EDA
+
+### plot for rating score vs budget
+```{r echo=FALSE, fig.height=3, message=FALSE, warning=FALSE}
+a = which(imdb$budget<1000)
+b = imdb$imdb_score[a]
+ggplot(mapping = aes(x = a, y = b)) + geom_point()+ geom_smooth()+ xlab("Budget")+ ylab("imdb_score")
+```
+
+
+
+
+### plot for rating score vs duration of the movie
+```{r echo=FALSE, fig.height=3, message=FALSE, warning=FALSE}
+ggplot(mapping = aes(x = duration, y = imdb_score), data = imdb) + geom_point()+ geom_smooth() + xlab("Duration of movies")
+```
+
+### boxplot for rating score in each country
+```{r, echo = FALSE, fig.height = 3}
+ggplot(mapping = aes(x = country, y = imdb_score), data = imdb) + geom_boxplot(aes(group = country))
+```
+
+
+## 3.2 Model Fit
+### Model 1
+```{r warning=FALSE, echo = FALSE}
+fit1 = lm(imdb_score ~ budget + duration + num_critic_for_reviews + factor(country), data = imdb, refresh = 0)
+print(fit1, digits = 4)
+```
+
+### Model 2
+```{r, echo = FALSE}
+fit2 = lmer(imdb_score ~ budget + duration + num_critic_for_reviews + (1 | country), data = imdb)
+display(fit2, digits = 4)
+```
+
+# 4.Result
+
+## 4.1 Model Check
+
+```{r,echo = FALSE, fig.height = 3}
+binnedplot(fitted(fit1), resid(fit1), main="Binned residual plot for model 1")
+binnedplot(fitted(fit2), resid(fit2), main="Binned residual plot for model 2")
+```
+
+## 4.2 Model Choose
+Based on the binned residual plots for these two models, I think none of them is appropriate to fit the data since the average residuals does not have an regular pattern. 
+
+
+# 5.Discussion
+
+## 5.1 Implication
+
+From the coefficients of the model, we can see that the relationship between rating score and other predictors is not very strong. The predictors *duration* and *num_critic_for_reviews* have positive effects on the rating score and the predictor *budget* has an negative effect on the rating score. For the coefficients of different countries, the rating score of movies in Israel is higher than other countries relatively.
+
+## 5.2 Limitation
+
+It is hard to find information that has strong relationship to the rating score in the dataset.
+
+## 5.3 Future Direction
+
+I will try to collect more information about movie so that I can find out the relationship between rating score and other factors.
+
+
+# 6.Reference
+
+Goodrich, Ben; Gabry, Jonah; Ali, Iamd; Brilleman, Sam (2018). "rstanarm: Bayesian applied regression
+modeling via Stan." R package version 2.17.4, http://mc-stan.org/.
+
+Hadley Wickham (2017). tidyverse: Easily Install and Load the tidyverse. R package version 1.2.1.
+https://CRAN.R-project.org/package=tidyverse
+
+Data source: https://www.kaggle.com/carolzhangdc/imdb-5000-movie-dataset
+
+
+# 7.Appendix
+
+##boxplot for rating score in each year
+
+```{r,echo = FALSE, fig.height = 3}
+ggplot(mapping = aes(x = title_year, y = imdb_score), data = imdb) + geom_boxplot(aes(group = title_year))
+```
+
+
+
